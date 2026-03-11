@@ -2,86 +2,25 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-
-        /* The trick: We size the container based on the phone's orientation */
-        #game-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            display: block;
-        }
-
-        /* If portrait, rotate the whole game 90 degrees */
+        #container { position: absolute; top: 0; left: 0; }
         @media screen and (orientation: portrait) {
-            #game-container {
-                width: 100vh;
-                height: 100vw;
-                transform: rotate(90deg);
-                transform-origin: top left;
-                left: 100vw; /* Move it back into view after rotation */
-            }
+            #container { width: 100vh; height: 100vw; transform: rotate(90deg); transform-origin: top left; left: 100vw; }
         }
-
-        /* If already landscape, just fill the screen */
-        @media screen and (orientation: landscape) {
-            #game-container {
-                width: 100vw;
-                height: 100vh;
-            }
-        }
-
-        #renderer-target { width: 100%; height: 100%; }
-
-        /* Joystick: Fixed to the visual bottom-left of the rotated container */
-        #joystick-zone { 
-            position: absolute; 
-            bottom: 40px; 
-            left: 40px; 
-            width: 120px; 
-            height: 120px; 
-            background: rgba(255,255,255,0.1); 
-            border: 2px solid rgba(255,255,255,0.3); 
-            border-radius: 50%; 
-            z-index: 20; 
-            touch-action: none;
-        }
-
-        #joystick-stick {
-            position: absolute; 
-            top: 50%; 
-            left: 50%;
-            width: 50px; 
-            height: 50px; 
-            background: #edc531;
-            border-radius: 50%; 
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-
-        #switch-btn { 
-            position: absolute; 
-            bottom: 40px; 
-            right: 40px; 
-            padding: 15px 25px; 
-            background: #edc531; 
-            border: none; 
-            border-radius: 8px; 
-            z-index: 20; 
-            font-weight: bold;
-            touch-action: none;
-        }
+        @media screen and (orientation: landscape) { #container { width: 100vw; height: 100vh; } }
+        
+        #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; z-index: 20; touch-action: none; }
+        #stick { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #edc531; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        #swap-btn { position: absolute; bottom: 40px; right: 40px; padding: 20px; background: #edc531; border: none; border-radius: 10px; font-weight: bold; z-index: 30; touch-action: auto; }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="joystick-zone">
-            <div id="joystick-stick"></div>
-        </div>
-        <button id="switch-btn">SWAP WEAPON</button>
-        <div id="renderer-target"></div>
+    <div id="container">
+        <div id="joystick-zone"><div id="stick"></div></div>
+        <button id="swap-btn">SWAP</button>
+        <div id="render-area"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -90,80 +29,76 @@
     <script src="Testsec.js"></script>
 
     <script>
-        const container = document.getElementById('game-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111);
-
-        // We use the container's clientWidth/Height instead of window.innerWidth
-        // so the aspect ratio stays correct even when rotated.
-        const w = (window.innerHeight > window.innerWidth) ? window.innerHeight : window.innerWidth;
-        const h = (window.innerHeight > window.innerWidth) ? window.innerWidth : window.innerHeight;
-
+        const w = Math.max(window.innerWidth, window.innerHeight), h = Math.min(window.innerWidth, window.innerHeight);
         const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(w, h);
-        document.getElementById('renderer-target').appendChild(renderer.domElement);
+        document.getElementById('render-area').appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
-
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5), new THREE.GridHelper(100, 50));
         scene.add(createTestEnv());
 
         const rifle = createTestPry();
         const pistol = createTestSec();
         rifle.position.set(0.3, -0.3, -0.6);
+        pistol.position.set(0.3, -0.3, -0.5);
+        
         camera.add(rifle);
         scene.add(camera);
-
         camera.position.set(0, 1.7, 5);
 
-        // --- FIXED MOVEMENT LOGIC ---
-        let moveForward = 0;
-        let moveSide = 0;
-        const stick = document.getElementById('joystick-stick');
-        const zone = document.getElementById('joystick-zone');
-
-        zone.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = zone.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            // Raw physical deltas
-            let dx = touch.clientX - centerX;
-            let dy = touch.clientY - centerY;
-
-            // If phone is portrait (rotated), we must swap coordinates to match visual movement
-            if (window.innerHeight > window.innerWidth) {
-                let temp = dx;
-                dx = dy;
-                dy = -temp;
-            }
-            
-            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 60);
-            const angle = Math.atan2(dy, dx);
-            
-            const visualDx = Math.cos(angle) * dist;
-            const visualDy = Math.sin(angle) * dist;
-
-            stick.style.transform = `translate(calc(-50% + ${visualDx}px), calc(-50% + ${visualDy}px))`;
-            
-            moveForward = -visualDy / 60 * 0.15;
-            moveSide = visualDx / 60 * 0.15;
+        // Weapon Swap Logic
+        let isRifle = true;
+        document.getElementById('swap-btn').addEventListener('touchstart', (e) => {
+            e.stopPropagation(); // Don't trigger "Look Around" when clicking button
+            if(isRifle) { camera.remove(rifle); camera.add(pistol); }
+            else { camera.remove(pistol); camera.add(rifle); }
+            isRifle = !isRifle;
         });
 
-        zone.addEventListener('touchend', () => {
+        // Combined Touch Logic (Left = Move, Right = Look)
+        let moveF = 0, moveS = 0, lookYaw = 0;
+        const stick = document.getElementById('stick');
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const isPortrait = window.innerHeight > window.innerWidth;
+            
+            // Remap coordinates based on rotation
+            const clientX = isPortrait ? touch.clientY : touch.clientX;
+            const clientY = isPortrait ? (window.innerWidth - touch.clientX) : touch.clientY;
+
+            // JOYSTICK SIDE (Left half of landscape screen)
+            if (clientX < w / 2) {
+                const rect = document.getElementById('joystick-zone').getBoundingClientRect();
+                const jCenterX = isPortrait ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
+                const jCenterY = isPortrait ? (window.innerWidth - rect.left - rect.width / 2) : rect.top + rect.height / 2;
+
+                let dx = clientX - jCenterX;
+                let dy = clientY - jCenterY;
+                const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 60);
+                const angle = Math.atan2(dy, dx);
+                
+                stick.style.transform = `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px))`;
+                moveF = -Math.sin(angle) * (dist / 60) * 0.15;
+                moveS = Math.cos(angle) * (dist / 60) * 0.15;
+            } else {
+                // LOOK SIDE (Right half)
+                // Simple horizontal look for now
+                camera.rotation.y -= (isPortrait ? e.touches[0].radiusX : 0.05); // Placeholder for drag delta
+            }
+        });
+
+        document.addEventListener('touchend', () => {
             stick.style.transform = `translate(-50%, -50%)`;
-            moveForward = 0; moveSide = 0;
+            moveF = 0; moveS = 0;
         });
 
         function animate() {
             requestAnimationFrame(animate);
-            camera.translateZ(-moveForward);
-            camera.translateX(moveSide);
+            camera.translateZ(-moveF);
+            camera.translateX(moveS);
             renderer.render(scene, camera);
         }
         animate();
