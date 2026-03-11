@@ -2,24 +2,50 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <style>
-        body { margin: 0; overflow: hidden; }
-        #joystick-zone { 
-            position: absolute; bottom: 50px; left: 50px; 
-            width: 120px; height: 120px; background: rgba(255,255,255,0.2); 
-            border-radius: 50%; z-index: 20; 
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        
+        /* Force Landscape for Mobile */
+        @media screen and (orientation: portrait) {
+            #game-container {
+                transform: rotate(90deg);
+                transform-origin: bottom left;
+                position: absolute;
+                top: -100vw;
+                left: 0;
+                height: 100vw;
+                width: 100vh;
+            }
         }
+
+        #game-container { width: 100vw; height: 100vh; position: relative; }
+
+        /* Joystick UI */
+        #joystick-zone { 
+            position: absolute; bottom: 40px; left: 40px; 
+            width: 120px; height: 120px; background: rgba(255,255,255,0.1); 
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; z-index: 20; 
+        }
+        #joystick-stick {
+            position: absolute; top: 50%; left: 50%;
+            width: 50px; height: 50px; background: #edc531;
+            border-radius: 50%; transform: translate(-50%, -50%);
+        }
+
         #switch-btn { 
-            position: absolute; bottom: 50px; right: 50px; 
-            width: 80px; height: 80px; background: #edc531; 
-            border-radius: 10px; z-index: 20; font-weight: bold;
+            position: absolute; bottom: 40px; right: 40px; 
+            padding: 20px; background: #edc531; color: black;
+            border: none; border-radius: 10px; z-index: 20; font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div id="joystick-zone"></div>
-    <button id="switch-btn">SWAP</button>
+    <div id="game-container">
+        <div id="joystick-zone"><div id="joystick-stick"></div></div>
+        <button id="switch-btn">SWAP WEAPON</button>
+        <div id="renderer-target"></div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="Testenv.js"></script>
@@ -28,52 +54,72 @@
 
     <script>
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        scene.background = new THREE.Color(0x111111); // Ensure it's not pure black
 
-        // Lights
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        
-        // Environment
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('renderer-target').appendChild(renderer.domElement);
+
+        // STAGE 1: LIGHTING (Added more so you can actually see)
+        const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(5, 10, 7);
+        scene.add(sun);
+
+        // STAGE 2: ENVIRONMENT
         const env = createTestEnv();
         scene.add(env);
 
-        // Player / Camera Setup
-        const playerHeight = 1.7;
-        camera.position.y = playerHeight;
+        camera.position.set(0, 1.7, 5); // Start slightly away from the center
 
-        // Weapons
+        // STAGE 3: WEAPONS
         const rifle = createTestPry();
         const pistol = createTestSec();
-        rifle.position.set(0.3, -0.3, -0.6); // Position in front of "eyes"
-        camera.add(rifle); // Attach weapon to camera for FPS view
+        rifle.position.set(0.3, -0.3, -0.6); 
+        camera.add(rifle); 
         scene.add(camera);
 
-        let currentWeapon = "pry";
-        document.getElementById('switch-btn').onclick = () => {
-            if(currentWeapon === "pry") {
-                camera.remove(rifle);
-                pistol.position.set(0.3, -0.3, -0.5);
-                camera.add(pistol);
-                currentWeapon = "sec";
-            } else {
-                camera.remove(pistol);
-                camera.add(rifle);
-                currentWeapon = "pry";
-            }
-        };
+        // STAGE 4: JOYSTICK LOGIC
+        let moveForward = 0;
+        let moveSide = 0;
+        const joystickStick = document.getElementById('joystick-stick');
+        const joystickZone = document.getElementById('joystick-zone');
 
-        // Basic Movement Logic
-        const move = { forward: 0, side: 0 };
-        // (You would add touch listeners here to update 'move')
+        joystickZone.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const rect = joystickZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
+            
+            const dist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+            const maxDist = 60;
+            if(dist > maxDist) {
+                deltaX *= maxDist / dist;
+                deltaY *= maxDist / dist;
+            }
+
+            joystickStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+            
+            // Movement speed factors
+            moveForward = -deltaY / maxDist * 0.1;
+            moveSide = deltaX / maxDist * 0.1;
+        });
+
+        joystickZone.addEventListener('touchend', () => {
+            joystickStick.style.transform = `translate(-50%, -50%)`;
+            moveForward = 0;
+            moveSide = 0;
+        });
 
         function animate() {
             requestAnimationFrame(animate);
-            // Move camera based on move values
-            camera.translateZ(move.forward);
-            camera.translateX(move.side);
+            camera.translateZ(-moveForward);
+            camera.translateX(moveSide);
             renderer.render(scene, camera);
         }
         animate();
