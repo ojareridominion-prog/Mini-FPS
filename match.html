@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, orientation=landscape">
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #ui { position: absolute; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        .btn { pointer-events: auto; padding: 15px 30px; background: #edc531; border: none; font-weight: bold; cursor: pointer; }
+        .back-btn { position: absolute; top: 20px; left: 20px; }
+        .start-btn { position: absolute; bottom: 40px; right: 40px; font-size: 2rem; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <button class="btn back-btn" onclick="location.href='homepage.html'">BACK</button>
+        <button class="btn start-btn" onclick="location.href='game.html'">START</button>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="Testplayer.js"></script>
+    <script src="Testpry.js"></script>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light, new THREE.AmbientLight(0x404040));
+
+        const player = createTestPlayer();
+        const rifle = createTestPry();
+        // Attach rifle to the player's right arm area
+        rifle.position.set(0.7, 1.6, 0.5); 
+        player.add(rifle);
+        
+        scene.add(player);
+        camera.position.set(2, 2, 5);
+        camera.lookAt(0, 1.5, 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            player.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
