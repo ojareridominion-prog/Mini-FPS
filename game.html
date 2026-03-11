@@ -48,6 +48,7 @@
         const vH = Math.min(window.innerWidth, window.innerHeight);
         
         const camera = new THREE.PerspectiveCamera(75, vW / vH, 0.1, 1000);
+        camera.rotation.order = 'YXZ'; // 👈 Prevents roll when looking up/down
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(vW, vH);
         document.getElementById('render-target').appendChild(renderer.domElement);
