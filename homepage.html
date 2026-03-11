@@ -1,186 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FPS Mini App - Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #1a1a1a;
-            font-family: Arial, sans-serif;
-            color: white;
-            /* Prevent text selection on mobile */
-            user-select: none; 
+        body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; }
+        #container { position: absolute; top: 0; left: 0; display: block; }
+        @media screen and (orientation: portrait) {
+            #container { width: 100vh; height: 100vw; transform: rotate(90deg); transform-origin: top left; left: 100vw; }
         }
-
-        /* 3D Canvas Background */
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
-        }
-
-        /* UI Overlay */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            pointer-events: none; /* Let clicks pass through to the 3D canvas where needed */
-        }
-
-        /* Left Side Menu */
-        .left-menu {
-            position: absolute;
-            top: 50%;
-            left: 20px;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            pointer-events: auto;
-        }
-
-        .menu-btn {
-            background: rgba(40, 40, 40, 0.8);
-            border: 2px solid #edc531; /* CoDM yellowish accent */
-            color: white;
-            padding: 15px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); /* Slight angled cut */
-            transition: background 0.2s;
-        }
-
-        .menu-btn:active {
-            background: #edc531;
-            color: black;
-        }
-
-        /* Bottom Right Match Button */
-        .match-btn {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            background: #edc531;
-            color: black;
-            border: none;
-            padding: 20px 50px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            pointer-events: auto;
-            text-decoration: none;
-            display: inline-block;
-            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-        }
+        @media screen and (orientation: landscape) { #container { width: 100vw; height: 100vh; } }
+        
+        .ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .menu { position: absolute; left: 40px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 20px; pointer-events: auto; }
+        .btn { padding: 15px 40px; background: #edc531; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
-
-    <div id="ui-layer">
-        <div class="left-menu">
-            <button class="menu-btn">Store</button>
-            <button class="menu-btn">Loadout</button>
-            <button class="menu-btn">Channel</button>
-            <button class="menu-btn">Support</button>
+    <div id="container">
+        <div class="ui-overlay">
+            <div class="menu">
+                <button class="btn" onclick="location.href='match.html'">BATTLE</button>
+                <button class="btn">LOADOUT</button>
+                <button class="btn">SETTINGS</button>
+            </div>
         </div>
-        
-        <a href="match.html" class="match-btn">MATCH</a>
+        <div id="canvas-target"></div>
     </div>
 
-    <div id="gameCanvas"></div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
     <script src="Testplayer.js"></script>
-
     <script>
-        // Set up the scene, camera, and renderer
-        const container = document.getElementById('gameCanvas');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x2a3b4c); // Dark bluish background
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.5, 4); // Position camera in front of the player
-
+        const w = Math.max(window.innerWidth, window.innerHeight);
+        const h = Math.min(window.innerWidth, window.innerHeight);
+        const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        container.appendChild(renderer.domElement);
+        renderer.setSize(w, h);
+        document.getElementById('canvas-target').appendChild(renderer.domElement);
 
-        // Add basic lighting so we can see the 3D objects
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 10, 5);
-        scene.add(directionalLight);
-
-        // Initialize the Testplayer
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const player = createTestPlayer();
         scene.add(player);
+        camera.position.set(0, 1.5, 4);
 
-        // Logic to rotate the player by dragging on the screen
-        let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
-
-        document.addEventListener('mousedown', () => isDragging = true);
-        document.addEventListener('mouseup', () => isDragging = false);
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                const deltaMove = {
-                    x: e.offsetX - previousMousePosition.x
-                };
-                // Rotate player on the Y axis based on mouse movement
-                player.rotation.y += deltaMove.x * 0.01;
-            }
-            previousMousePosition = { x: e.offsetX, y: e.offsetY };
-        });
-
-        // Touch support for mobile dragging
-        document.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        });
+        let isDragging = false, lastX = 0;
+        document.addEventListener('touchstart', (e) => { isDragging = true; lastX = e.touches[0].clientX; });
         document.addEventListener('touchend', () => isDragging = false);
         document.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                const deltaMove = {
-                    x: e.touches[0].clientX - previousMousePosition.x
-                };
-                player.rotation.y += deltaMove.x * 0.01;
-            }
-            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            if (!isDragging) return;
+            let dx = e.touches[0].clientX - lastX;
+            if (window.innerHeight > window.innerWidth) { dx = e.touches[0].clientY - lastX; }
+            player.rotation.y += dx * 0.01;
+            lastX = (window.innerHeight > window.innerWidth) ? e.touches[0].clientY : e.touches[0].clientX;
         });
 
-        // Animation Loop
-        function animate() {
-            requestAnimationFrame(animate);
-            // Slowly rotate player automatically if not being dragged
-            if (!isDragging) {
-                player.rotation.y += 0.005; 
-            }
-            renderer.render(scene, camera);
-        }
-        
+        function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
         animate();
-
-        // Handle window resizing
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
-  
