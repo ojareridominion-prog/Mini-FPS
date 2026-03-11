@@ -1,51 +1,79 @@
-// Testplayer.js
-// This creates a placeholder 3D model for your soldier.
-// Later, you will replace this code with a GLTFLoader to load your actual .glb soldier file.
 
 function createTestPlayer() {
-    // Create a group to hold all body parts together
-    const playerGroup = new THREE.Group();
-
-    // Material for the soldier (Desert camo color based on your image)
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355 });
-    const gearMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a }); // Darker for vest/mask
-
-    // 1. Torso
-    const torsoGeometry = new THREE.BoxGeometry(1, 1.2, 0.5);
-    const torso = new THREE.Mesh(torsoGeometry, bodyMaterial);
-    torso.position.y = 1.6;
-    playerGroup.add(torso);
-
-    // 2. Head
-    const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const head = new THREE.Mesh(headGeometry, gearMaterial);
-    head.position.y = 2.6; // Sitting on top of torso
-    playerGroup.add(head);
-
-    // 3. Legs
-    const legGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1);
+    const group = new THREE.Group();
     
-    const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
-    leftLeg.position.set(-0.3, 0.5, 0);
-    playerGroup.add(leftLeg);
+    // Materials
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.4, metalness: 0.1 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x2244aa, roughness: 0.6 });
+    const torsoMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.5 }); // red
+    const armMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.5 });
+    const handMat = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.4 });
 
-    const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
-    rightLeg.position.set(0.3, 0.5, 0);
-    playerGroup.add(rightLeg);
+    // Head (rounded cube or cylinder)
+    const headGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16);
+    const head = new THREE.Mesh(headGeo, skinMat);
+    head.position.y = 2.0;
+    head.castShadow = true;
+    head.receiveShadow = true;
+    group.add(head);
 
-    // 4. Arms
-    const armGeometry = new THREE.CylinderGeometry(0.15, 0.15, 1);
-    
-    const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
-    leftArm.position.set(-0.7, 1.6, 0);
-    playerGroup.add(leftArm);
+    // Torso
+    const torsoGeo = new THREE.BoxGeometry(0.8, 1.0, 0.4);
+    const torso = new THREE.Mesh(torsoGeo, torsoMat);
+    torso.position.y = 1.25;
+    torso.castShadow = true;
+    torso.receiveShadow = true;
+    group.add(torso);
 
-    const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
-    rightArm.position.set(0.7, 1.6, 0);
-    playerGroup.add(rightArm);
+    // Hips
+    const hipsGeo = new THREE.BoxGeometry(0.7, 0.3, 0.4);
+    const hips = new THREE.Mesh(hipsGeo, pantsMat);
+    hips.position.y = 0.65;
+    hips.castShadow = true;
+    hips.receiveShadow = true;
+    group.add(hips);
 
-    // Center the group so it rotates cleanly
-    playerGroup.position.y = -1; 
+    // Legs
+    const legGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.9, 8);
+    const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+    leftLeg.position.set(-0.25, 0.0, 0);
+    leftLeg.castShadow = true;
+    leftLeg.receiveShadow = true;
+    group.add(leftLeg);
 
-    return playerGroup;
-}
+    const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+    rightLeg.position.set(0.25, 0.0, 0);
+    rightLeg.castShadow = true;
+    rightLeg.receiveShadow = true;
+    group.add(rightLeg);
+
+    // Arms
+    const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.set(-0.6, 1.4, 0);
+    leftArm.rotation.z = 0.2; // slight angle
+    leftArm.castShadow = true;
+    leftArm.receiveShadow = true;
+    group.add(leftArm);
+
+    const rightArm = new THREE.Mesh(armGeo, armMat);
+    rightArm.position.set(0.6, 1.4, 0);
+    rightArm.rotation.z = -0.2;
+    rightArm.castShadow = true;
+    rightArm.receiveShadow = true;
+    group.add(rightArm);
+
+    // Hands (small spheres)
+    const handGeo = new THREE.SphereGeometry(0.15, 8);
+    const leftHand = new THREE.Mesh(handGeo, handMat);
+    leftHand.position.set(-0.8, 1.0, 0);
+    leftHand.castShadow = true;
+    group.add(leftHand);
+
+    const rightHand = new THREE.Mesh(handGeo, handMat);
+    rightHand.position.set(0.8, 1.0, 0);
+    rightHand.castShadow = true;
+    group.add(rightHand);
+
+    return group;
+                                             }
