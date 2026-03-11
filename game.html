@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #joystick-zone { 
+            position: absolute; bottom: 50px; left: 50px; 
+            width: 120px; height: 120px; background: rgba(255,255,255,0.2); 
+            border-radius: 50%; z-index: 20; 
+        }
+        #switch-btn { 
+            position: absolute; bottom: 50px; right: 50px; 
+            width: 80px; height: 80px; background: #edc531; 
+            border-radius: 10px; z-index: 20; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="joystick-zone"></div>
+    <button id="switch-btn">SWAP</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="Testenv.js"></script>
+    <script src="Testpry.js"></script>
+    <script src="Testsec.js"></script>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lights
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        
+        // Environment
+        const env = createTestEnv();
+        scene.add(env);
+
+        // Player / Camera Setup
+        const playerHeight = 1.7;
+        camera.position.y = playerHeight;
+
+        // Weapons
+        const rifle = createTestPry();
+        const pistol = createTestSec();
+        rifle.position.set(0.3, -0.3, -0.6); // Position in front of "eyes"
+        camera.add(rifle); // Attach weapon to camera for FPS view
+        scene.add(camera);
+
+        let currentWeapon = "pry";
+        document.getElementById('switch-btn').onclick = () => {
+            if(currentWeapon === "pry") {
+                camera.remove(rifle);
+                pistol.position.set(0.3, -0.3, -0.5);
+                camera.add(pistol);
+                currentWeapon = "sec";
+            } else {
+                camera.remove(pistol);
+                camera.add(rifle);
+                currentWeapon = "pry";
+            }
+        };
+
+        // Basic Movement Logic
+        const move = { forward: 0, side: 0 };
+        // (You would add touch listeners here to update 'move')
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // Move camera based on move values
+            camera.translateZ(move.forward);
+            camera.translateX(move.side);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
