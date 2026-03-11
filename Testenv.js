@@ -2,32 +2,32 @@
 function createTestEnv() {
     const envGroup = new THREE.Group();
 
-    // Materials
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333 }); // Dark concrete
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-
-    // 1. Floor
-    const floorGeo = new THREE.PlaneGeometry(50, 50);
+    // Floor with a grid pattern so you can see movement
+    const floorGeo = new THREE.PlaneGeometry(100, 100);
+    const floorMat = new THREE.MeshStandardMaterial({ 
+        color: 0x444444, 
+        side: THREE.DoubleSide 
+    });
     const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2; // Lay it flat
+    floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
-    // 2. Basic Walls (Simple Warehouse Box)
-    const wallGeo = new THREE.BoxGeometry(50, 10, 1);
+    // Add a Grid Helper to make movement obvious
+    const grid = new THREE.GridHelper(100, 50, 0x888888, 0x444444);
+    envGroup.add(grid);
+
+    // Brighter Walls
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x777777 });
+    const wallGeo = new THREE.BoxGeometry(100, 15, 1);
     
     const backWall = new THREE.Mesh(wallGeo, wallMat);
-    backWall.position.set(0, 5, -25);
+    backWall.position.set(0, 7.5, -50);
     envGroup.add(backWall);
 
     const leftWall = new THREE.Mesh(wallGeo, wallMat);
     leftWall.rotation.y = Math.PI / 2;
-    leftWall.position.set(-25, 5, 0);
+    leftWall.position.set(-50, 7.5, 0);
     envGroup.add(leftWall);
-
-    const rightWall = new THREE.Mesh(wallGeo, wallMat);
-    rightWall.rotation.y = -Math.PI / 2;
-    rightWall.position.set(25, 5, 0);
-    envGroup.add(rightWall);
 
     return envGroup;
 }
